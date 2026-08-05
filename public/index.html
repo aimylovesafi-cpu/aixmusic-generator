@@ -4,83 +4,173 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>AIxMUSIC GENERATOR</title>
-
-<!-- iOS Fullscreen PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AIxMUSIC">
 <link rel="apple-touch-icon" href="/logo.png">
-<link rel="apple-touch-startup-image" href="/logo.png">
-<meta name="theme-color" content="#8b5cf6">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/logo.png">
-
-<!-- Share Link Preview -->
-<meta property="og:title" content="AIxMUSIC GENERATOR">
-<meta property="og:description" content="Infinite AI Music - Rock, Deep House, Metal, Classic, Jazz, Blues">
 <meta property="og:image" content="/logo.png">
-<meta property="og:type" content="website">
-
 <style>
 *{ -webkit-tap-highlight-color: transparent; box-sizing:border-box; }
 html,body{height:100%; margin:0; background:#050510; color:#fff; font-family:-apple-system,system-ui; overscroll-behavior:none;}
 body{display:flex; justify-content:center; align-items:center; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
-.app{width:100%; max-width:410px; padding:24px; background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(0,0,0,.7)); border:1.5px solid #8b5cf6; border-radius:32px; box-shadow:0 0 100px rgba(139,92,246,.6); text-align:center;}
+.app{width:100%; max-width:410px; padding:24px; background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(0,0,0,.7)); border:1.5px solid #8b5cf6; border-radius:32px; box-shadow:0 0 100px rgba(139,92,246,.6); text-align:center; position:relative;}
 .logo{width:88px; height:88px; border-radius:22px; box-shadow:0 0 30px #8b5cf6; margin-bottom:12px;}
 .genres{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0;}
 .g{padding:11px 4px; border:1px solid #8b5cf6; border-radius:12px; background:rgba(139,92,246,.1); color:#fff; font-weight:700; font-size:11px; cursor:pointer;}
 .g.active{background:#8b5cf6; box-shadow:0 0 15px #8b5cf6;}
 .bars{display:flex; justify-content:center; gap:4px; height:48px; align-items:center; margin:14px 0;}
-.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px;}
+.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px; transition:height.08s;}
 input{width:100%; background:#111; border:1px solid #333; border-radius:12px; padding:12px; color:#fff; margin:8px 0;}
 button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16px; border-radius:99px; font-weight:800; font-size:16px; box-shadow:0 0 30px #8b5cf6;}
+#debugBtn{position:absolute; top:12px; right:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:8px; padding:4px 8px; font-size:10px;}
+#debugPanel{display:none; text-align:left; background:#000; border:1px solid #8b5cf6; border-radius:12px; padding:8px; margin-top:12px; height:160px; overflow:auto; font-family:monospace; font-size:10px; line-height:1.4; white-space:pre-wrap;}
 </style>
 </head>
 <body>
 <div class="app">
+  <button id="debugBtn" onclick="toggleDebug()">🐞 DEBUG</button>
   <img src="/logo.png" class="logo" alt="AIxMUSIC">
   <h1 style="margin:0; letter-spacing:2px; font-size:20px;">AIxMUSIC GENERATOR</h1>
   <small style="color:#22d3ee;">INFINITE ENGINE • by AIxFACTORY</small>
-  <input id="prompt" placeholder="Describe music... e.g dark piano deep house">
+  <input id="prompt" value="Deep house music" placeholder="Describe music...">
   <div class="genres" id="genres"></div>
   <div class="bars" id="bars"></div>
   <button class="main" id="btn" onclick="toggle()">▶ START INFINITE</button>
   <div id="status" style="font-size:11px; opacity:.7; margin-top:12px; font-family:monospace;">Select genre to start</div>
+  <div id="debugPanel"></div>
 </div>
 
 <script>
 const GENRES=['Deep House','Rock','Metal','Classic','Jazz','Blues','Lo-Fi','Trap'];
-let GENRE='Deep House', ctx, playing=false, timer, nextNote=0, step=0, track=null;
+let GENRE='Deep House', ctx, masterGain, playing=false, timer, nextNote=0, step=0, track=null;
+let logs=[];
+
+function log(msg){
+  console.log(msg);
+  logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+  if(logs.length>100) logs.shift();
+  document.getElementById('debugPanel').innerText = logs.join('\n');
+  document.getElementById('debugPanel').scrollTop = 9999;
+}
+function toggleDebug(){
+  let p=document.getElementById('debugPanel');
+  p.style.display = p.style.display==='block'? 'none' : 'block';
+  log('Debug panel toggled');
+}
+
 const gDiv=document.getElementById('genres');
-GENRES.forEach(g=>{ let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g; b.onclick=()=>{GENRE=g; document.querySelectorAll('.g').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }; gDiv.appendChild(b); });
-const barsDiv=document.getElementById('bars'); for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='8px'; barsDiv.appendChild(d);} const bars=document.querySelectorAll('.bar');
+GENRES.forEach(g=>{
+  let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g;
+  b.onclick=()=>{GENRE=g; document.querySelectorAll('.g').forEach(x=>x.classList.remove('active')); b.classList.add('active'); log('Genre -> '+g);};
+  gDiv.appendChild(b);
+});
+const barsDiv=document.getElementById('bars');
+for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='8px'; barsDiv.appendChild(d);}
+const bars=document.querySelectorAll('.bar');
 function rnd(a,b){return Math.random()*(b-a)+a}
-function kick(t){let o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.5);}
-function playTone(t,f,fType){let o=ctx.createOscillator(),g=ctx.createGain();o.type=fType;o.frequency.value=f;g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.6);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.7);}
-async function fetchTrack(){ const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})}); return await res.json(); }
+
+function initAudio(){
+  if(!ctx){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(ctx.destination);
+    log('AudioContext created: '+ctx.state+' sr:'+ctx.sampleRate);
+  }
+  if(ctx.state==='suspended'){
+    ctx.resume().then(()=>log('AudioContext resumed!'));
+  }
+}
+
+function kick(t){
+  try{
+    let o=ctx.createOscillator(), g=ctx.createGain();
+    o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+0.12);
+    g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5);
+    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5);
+  }catch(e){log('kick error: '+e.message)}
+}
+function hat(t){
+  let buffer=ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
+  let data=buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+  let src=ctx.createBufferSource(); src.buffer=buffer;
+  let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
+  let g=ctx.createGain(); g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.1);
+  src.connect(f); f.connect(g); g.connect(masterGain); src.start(t);
+}
+function playTone(t,f,type){
+  try{
+    let o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type||'sawtooth'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.6);
+    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.7);
+  }catch(e){log('tone error: '+e.message)}
+}
+
+function getFallbackTrack(){
+  log('Using FALLBACK local track (Groq failed)');
+  return {
+    bpm:120, scale:[55,61.7,73.4,82.4,98], wave:'sawtooth', mood:'fallback deep house',
+    bass:[1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0],
+    lead:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+    drums:{ kick:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], hat:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], clap:[0,0,0,0,1,0,0,0,1,0,0,0] }
+  }
+}
+
+async function fetchTrack(){
+  try{
+    log('Fetching Groq -> '+GENRE);
+    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})});
+    if(!res.ok) throw new Error('HTTP '+res.status+' '+await res.text());
+    const data=await res.json();
+    log('Groq OK: BPM '+data.bpm+' mood:'+data.mood);
+    return data;
+  }catch(e){
+    log('Groq ERROR: '+e.message);
+    return getFallbackTrack();
+  }
+}
+
 function scheduler(){
  if(!track) return;
- let interval=60/track.bpm/2;
+ let interval=60/track.bpm/4;
  while(nextNote < ctx.currentTime+0.2){
    if(track.drums.kick[step%16]) kick(nextNote);
-   if(track.bass[step%16]){ let f=track.scale[track.bass[step%16]%track.scale.length]*2; playTone(nextNote,f,track.wave); }
+   if(track.drums.hat[step%16]) hat(nextNote);
+   if(track.bass[step%16]){ let idx=step%track.scale.length; let f=track.scale[idx]* (GENRE==='Classic'?2:1); playTone(nextNote,f,track.wave); }
    bars.forEach(b=>b.style.height=rnd(6,52)+'px');
    nextNote+=interval; step=(step+1)%16;
-   if(step===0){ fetchTrack().then(t=>track=t); }
+   if(step===0){
+     fetchTrack().then(t=>{track=t; document.getElementById('status').innerText=`∞ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`});
+   }
  }
- timer=setTimeout(scheduler,50);
+ timer=setTimeout(scheduler,25);
 }
+
 async function toggle(){
- if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+ initAudio();
  if(!playing){
+   log('START pressed, ctx.state='+ctx.state);
    document.getElementById('status').innerText='🧠 Groq AI generating '+GENRE+'...';
    track=await fetchTrack();
-   playing=true; nextNote=ctx.currentTime; step=0; scheduler();
+   playing=true; nextNote=ctx.currentTime+0.05; step=0; scheduler();
    document.getElementById('btn').innerText='■ STOP ENGINE';
-   document.getElementById('status').innerText=`♾️ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`;
- } else { playing=false; clearTimeout(timer); document.getElementById('btn').innerText='▶ START INFINITE'; document.getElementById('status').innerText='Stopped'; }
+   document.getElementById('status').innerText=`∞ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`;
+   log('Engine started');
+ }else{
+   playing=false; clearTimeout(timer);
+   document.getElementById('btn').innerText='▶ START INFINITE';
+   document.getElementById('status').innerText='Stopped';
+   bars.forEach(b=>b.style.height='8px');
+   log('Engine stopped');
+ }
 }
-if('serviceWorker' in navigator){ /* optional PWA cache */ }
+
+// iOS unlock trick
+document.addEventListener('touchstart', ()=>{ if(ctx && ctx.state==='suspended') ctx.resume(); }, {once:true});
+log('App loaded. Ready.');
 </script>
 </body>
 </html>
