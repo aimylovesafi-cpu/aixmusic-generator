@@ -18,13 +18,13 @@ body{display:flex; justify-content:center; align-items:center; padding: env(safe
 .app{width:100%; max-width:410px; padding:24px; background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(0,0,0,.7)); border:1.5px solid #8b5cf6; border-radius:32px; box-shadow:0 0 100px rgba(139,92,246,.6); text-align:center; position:relative;}
 .logo{width:88px; height:88px; border-radius:22px; box-shadow:0 0 30px #8b5cf6; margin-bottom:12px;}
 .genres{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0;}
-.g{padding:11px 4px; border:1px solid #8b5cf6; border-radius:12px; background:rgba(139,92,246,.1); color:#fff; font-weight:700; font-size:11px; cursor:pointer;}
-.g.active{background:#8b5cf6; box-shadow:0 0 15px #8b5cf6;}
+.g{padding:11px 4px; border:1px solid #8b5cf6; border-radius:12px; background:rgba(139,92,246,.1); color:#fff; font-weight:700; font-size:11px; cursor:pointer; transition:.2s;}
+.g.active{background:#8b5cf6; box-shadow:0 0 15px #8b5cf6; transform:scale(1.05);}
 .bars{display:flex; justify-content:center; gap:4px; height:48px; align-items:center; margin:14px 0;}
-.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px; transition:height.08s;}
+.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px; transition:height.1s ease;}
 input{width:100%; background:#111; border:1px solid #333; border-radius:12px; padding:12px; color:#fff; margin:8px 0;}
-button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16px; border-radius:99px; font-weight:800; font-size:16px; box-shadow:0 0 30px #8b5cf6;}
-#debugBtn{position:absolute; top:12px; right:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:8px; padding:4px 8px; font-size:10px;}
+button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16px; border-radius:99px; font-weight:800; font-size:16px; box-shadow:0 0 30px #8b5cf6; cursor:pointer;}
+#debugBtn{position:absolute; top:12px; right:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:8px; padding:4px 8px; font-size:10px; cursor:pointer;}
 #debugPanel{display:none; text-align:left; background:#000; border:1px solid #8b5cf6; border-radius:12px; padding:8px; margin-top:12px; height:160px; overflow:auto; font-family:monospace; font-size:10px; line-height:1.4; white-space:pre-wrap;}
 </style>
 </head>
@@ -43,23 +43,26 @@ button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16p
 </div>
 
 <script>
+// --- CONFIG ---
 const GENRES=['Deep House','Rock','Metal','Classic','Jazz','Blues','Lo-Fi','Trap'];
-let GENRE='Deep House', ctx, masterGain, playing=false, timer, nextNote=0, step=0, track=null;
-let logs=[];
+let GENRE='Deep House', ctx, masterGain, playing=false, timer, nextNote=0, step=0, track=null, loopCount=0;
+let trackQueue=[], lastFetch=0, logs=[];
 
 function log(msg){
   console.log(msg);
   logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
-  if(logs.length>100) logs.shift();
-  document.getElementById('debugPanel').innerText = logs.join('\n');
-  document.getElementById('debugPanel').scrollTop = 9999;
+  if(logs.length>120) logs.shift();
+  const p=document.getElementById('debugPanel');
+  p.innerText=logs.join('\n'); p.scrollTop=9999;
 }
 function toggleDebug(){
-  let p=document.getElementById('debugPanel');
-  p.style.display = p.style.display==='block'? 'none' : 'block';
-  log('Debug panel toggled');
+  const p=document.getElementById('debugPanel');
+  p.style.display=p.style.display==='block'?'none':'block';
+  log('Debug toggled');
 }
+function rnd(a,b){return Math.random()*(b-a)+a}
 
+// UI
 const gDiv=document.getElementById('genres');
 GENRES.forEach(g=>{
   let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g;
@@ -69,108 +72,123 @@ GENRES.forEach(g=>{
 const barsDiv=document.getElementById('bars');
 for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='8px'; barsDiv.appendChild(d);}
 const bars=document.querySelectorAll('.bar');
-function rnd(a,b){return Math.random()*(b-a)+a}
 
+// AUDIO CORE
 function initAudio(){
   if(!ctx){
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    masterGain = ctx.createGain();
-    masterGain.gain.value = 0.8;
-    masterGain.connect(ctx.destination);
-    log('AudioContext created: '+ctx.state+' sr:'+ctx.sampleRate);
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=ctx.createGain(); masterGain.gain.value=0.85; masterGain.connect(ctx.destination);
+    log(`AudioContext: ${ctx.state} sr:${ctx.sampleRate}`);
   }
-  if(ctx.state==='suspended'){
-    ctx.resume().then(()=>log('AudioContext resumed!'));
-  }
+  if(ctx.state==='suspended') ctx.resume().then(()=>log('Resumed!'));
 }
 
-function kick(t){
-  try{
-    let o=ctx.createOscillator(), g=ctx.createGain();
-    o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+0.12);
-    g.gain.setValueAtTime(1,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5);
-    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5);
-  }catch(e){log('kick error: '+e.message)}
-}
-function hat(t){
-  let buffer=ctx.createBuffer(1, ctx.sampleRate*0.05, ctx.sampleRate);
-  let data=buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
-  let src=ctx.createBufferSource(); src.buffer=buffer;
-  let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
-  let g=ctx.createGain(); g.gain.setValueAtTime(0.2,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.1);
-  src.connect(f); f.connect(g); g.connect(masterGain); src.start(t);
-}
-function playTone(t,f,type){
-  try{
-    let o=ctx.createOscillator(), g=ctx.createGain();
-    o.type=type||'sawtooth'; o.frequency.value=f;
-    g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.6);
-    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.7);
-  }catch(e){log('tone error: '+e.message)}
-}
+// PRO Instruments
+function kick(t,vel=1){ let o=ctx.createOscillator(),g=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(42,t+0.12); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5); }
+function snare(t,vel=0.8){ let buf=ctx.createBuffer(1,ctx.sampleRate*0.2,ctx.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2); let s=ctx.createBufferSource(); s.buffer=buf; let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=180; let g=ctx.createGain(); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.32); s.connect(f); f.connect(g); g.connect(masterGain); s.start(t); }
+function hat(t,open=false,vel=0.4){ let b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); let src=ctx.createBufferSource(); src.buffer=b; let hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=open?3800:7800; let g=ctx.createGain(); g.gain.setValueAtTime(vel*(open?0.5:0.3),t); g.gain.exponentialRampToValueAtTime(0.01,t+(open?0.35:0.09)); src.connect(hp); hp.connect(g); g.connect(masterGain); src.start(t); }
+function playChord(t,rootFreq,voicing){ let intervals=voicing==='power'?[0,7]:voicing==='7th'?[0,4,7,10]:[0,4,7]; intervals.forEach((semi,i)=>{ let f=rootFreq*Math.pow(2,semi/12); let o=ctx.createOscillator(),g=ctx.createGain(); o.type='triangle'; o.frequency.value=f; o.detune.value=rnd(-4,4); g.gain.setValueAtTime(0.18/(i+1.2),t); g.gain.exponentialRampToValueAtTime(0.01,t+1.1); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+1.2); }); }
+function playTone(t,f,type,vel=0.34,len=0.55){ try{ let o=ctx.createOscillator(),g=ctx.createGain(); o.type=type||'sawtooth'; o.frequency.value=f; o.detune.value=rnd(-6,6); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+len); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+len+0.05);}catch(e){log('tone err:'+e.message)} }
 
+// PRO Fallback with real music theory
 function getFallbackTrack(){
-  log('Using FALLBACK local track (Groq failed)');
-  return {
-    bpm:120, scale:[55,61.7,73.4,82.4,98], wave:'sawtooth', mood:'fallback deep house',
-    bass:[1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0],
-    lead:[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
-    drums:{ kick:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], hat:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], clap:[0,0,0,0,1,0,0,0,1,0,0,0] }
-  }
+  const LIB={
+    "Deep House":{bpm:124, scale:[55,62,73.4,82.4,98,110], prog:[0,3,4,3], voicing:"7th", swing:0},
+    "Rock":{bpm:138, scale:[82.4,98,110,123,146.8], prog:[0,3,4,0], voicing:"power", swing:0},
+    "Metal":{bpm:160, scale:[41.2,49,58.2,69.2,82.4], prog:[0,6,5,3], voicing:"power", swing:0},
+    "Classic":{bpm:84, scale:[130.8,146.8,164.8,196,220,246.9,293.6], prog:[0,3,4,4], voicing:"triad", swing:0},
+    "Jazz":{bpm:112, scale:[73.4,82.4,87.3,98,110,123.4,130.8], prog:[1,4,0,5], voicing:"7th", swing:0.22},
+    "Blues":{bpm:88, scale:[55,65.4,73.4,77.7,82.4,98], prog:[0,0,0,0,3,4,0,0], voicing:"7th", swing:0.12},
+    "Lo-Fi":{bpm:78, scale:[65.4,77.7,87.3,98,116.5], prog:[0,3,2,1], voicing:"7th", swing:0.15},
+    "Trap":{bpm:140, scale:[48,56,63.5,72,85], prog:[0,5,3,4], voicing:"triad", swing:0}
+  };
+  let th=LIB[GENRE]||LIB["Deep House"];
+  // generate non-repetitive patterns
+  let kickP=Array(16).fill(0).map((_,i)=> i%4===0 || (GENRE==="Rock"&&i===10)?1:0);
+  let hatP=Array(16).fill(0).map((_,i)=> GENRE==="Jazz"? (i%3===0?1:0) : (i%2===1?1:0) );
+  let leadP=Array(16).fill(null).map((_,i)=> Math.random()>0.6?{note:(Math.random()*th.scale.length)|0, vel:rnd(0.4,0.9), len:rnd(0.2,0.7)}:null);
+  log(`Fallback PRO: ${GENRE} prog ${th.prog}`);
+  return { bpm:th.bpm+rnd(-3,3)|0, scale:th.scale, wave:GENRE==="Classic"?"sine":GENRE==="Jazz"?"triangle":"sawtooth", mood:"pro live", swing:th.swing, chordProgression:th.prog, bass:{pattern:kickP}, chords:{pattern:Array(16).fill(0).map((_,i)=> i%4===0?1:0), voicing:th.voicing}, lead:{pattern:leadP, humanize:true}, drums:{kick:kickP, snare:Array(16).fill(0).map((_,i)=> i===4||i===12?1:0), hat:hatP, openHat:Array(16).fill(0).map((_,i)=> i===7||i===15?1:0)} };
 }
 
+// TOKEN OPTIMIZED fetch
 async function fetchTrack(){
-  try{
-    log('Fetching Groq -> '+GENRE);
-    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})});
-    if(!res.ok) throw new Error('HTTP '+res.status+' '+await res.text());
-    const data=await res.json();
-    log('Groq OK: BPM '+data.bpm+' mood:'+data.mood);
-    return data;
-  }catch(e){
-    log('Groq ERROR: '+e.message);
-    return getFallbackTrack();
+  if(trackQueue.length>0){
+    log(`Queue hit: ${trackQueue.length} left | saving tokens`);
+    return trackQueue.shift();
   }
+  let now=Date.now();
+  if(now-lastFetch<28000){ log('Rate guard: local pro track'); return getFallbackTrack(); }
+  lastFetch=now;
+  try{
+    log(`Groq PRO (5 tracks) -> ${GENRE}`);
+    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})});
+    if(!res.ok) throw new Error('HTTP '+res.status+' '+(await res.text()).slice(0,120));
+    const data=await res.json();
+    let list=data.tracks||[data];
+    trackQueue=list.slice(1);
+    log(`Groq OK: ${list.length} tracks | BPM ${list[0].bpm} | mood ${list[0].mood} | Q=${trackQueue.length}`);
+    return list[0];
+  }catch(e){ log('Groq ERR: '+e.message); return getFallbackTrack(); }
 }
 
 function scheduler(){
  if(!track) return;
- let interval=60/track.bpm/4;
- while(nextNote < ctx.currentTime+0.2){
-   if(track.drums.kick[step%16]) kick(nextNote);
-   if(track.drums.hat[step%16]) hat(nextNote);
-   if(track.bass[step%16]){ let idx=step%track.scale.length; let f=track.scale[idx]* (GENRE==='Classic'?2:1); playTone(nextNote,f,track.wave); }
-   bars.forEach(b=>b.style.height=rnd(6,52)+'px');
-   nextNote+=interval; step=(step+1)%16;
+ let base=60/track.bpm/4;
+ let swing=track.swing||0;
+ while(nextNote < ctx.currentTime+0.25){
+   let s=step%16;
+   let human=track.lead?.humanize? rnd(-0.015,0.015):0;
+   let t=nextNote+human;
+   let prog=track.chordProgression||[0,3,4,3];
+   let cIdx=prog[Math.floor(step/4)%prog.length];
+   let root=track.scale[cIdx % track.scale.length]||track.scale[0];
+
+   if(track.drums?.kick[s]) kick(t, 0.9+rnd(0,0.2));
+   if(track.drums?.snare[s]) snare(t, 0.6+rnd(0,0.3));
+   if(track.drums?.hat[s]) hat(t,false,0.4);
+   if(track.drums?.openHat[s]) hat(t,true,0.35);
+
+   if(track.chords?.pattern[s]) playChord(t, root*2, track.chords.voicing||'triad');
+   if(track.bass?.pattern[s]) playTone(t, root*0.5, 'sine', 0.55, 0.9);
+
+   let lead=track.lead?.pattern?.[s];
+   if(lead && lead.note!==null){ let f=track.scale[lead.note%track.scale.length]*2; playTone(t,f,track.wave,lead.vel||0.5,lead.len||0.4); }
+
+   bars.forEach((b,i)=>{ b.style.height=(i%16===s? rnd(28,56):rnd(4,16))+'px'; });
+   let isOff=s%2===1;
+   nextNote+= base * (isOff? 1+swing : 1);
+   step=(step+1)%16;
    if(step===0){
-     fetchTrack().then(t=>{track=t; document.getElementById('status').innerText=`∞ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`});
+     loopCount++;
+     if(loopCount%4===0){
+       fetchTrack().then(nt=>{ track=nt; document.getElementById('status').innerText=`∞ ${GENRE} | ${track.bpm} BPM | ${track.mood} | Q:${trackQueue.length}`; });
+     }
    }
  }
- timer=setTimeout(scheduler,25);
+ timer=setTimeout(scheduler,30);
 }
 
 async function toggle(){
  initAudio();
  if(!playing){
-   log('START pressed, ctx.state='+ctx.state);
-   document.getElementById('status').innerText='🧠 Groq AI generating '+GENRE+'...';
+   log('START ctx:'+ctx.state);
+   document.getElementById('status').innerText='🧠 Composing...';
    track=await fetchTrack();
-   playing=true; nextNote=ctx.currentTime+0.05; step=0; scheduler();
+   playing=true; nextNote=ctx.currentTime+0.06; step=0; scheduler();
    document.getElementById('btn').innerText='■ STOP ENGINE';
-   document.getElementById('status').innerText=`∞ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`;
-   log('Engine started');
+   document.getElementById('status').innerText=`∞ ${GENRE} | ${track.bpm} BPM | ${track.mood} | Q:${trackQueue.length}`;
+   log('Engine ON');
  }else{
    playing=false; clearTimeout(timer);
    document.getElementById('btn').innerText='▶ START INFINITE';
    document.getElementById('status').innerText='Stopped';
    bars.forEach(b=>b.style.height='8px');
-   log('Engine stopped');
+   log('Engine OFF');
  }
 }
-
-// iOS unlock trick
-document.addEventListener('touchstart', ()=>{ if(ctx && ctx.state==='suspended') ctx.resume(); }, {once:true});
-log('App loaded. Ready.');
+document.addEventListener('touchstart',()=>{ if(ctx&&ctx.state==='suspended') ctx.resume(); }, {once:true});
+log('AIxMUSIC PRO V4 Ready - Token optimized, non-repetitive');
 </script>
 </body>
 </html>
