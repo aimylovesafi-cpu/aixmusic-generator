@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>AIxMUSIC GENERATOR</title>
+
+<!-- iOS Fullscreen PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AIxMUSIC">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="apple-touch-startup-image" href="/logo.png">
+<meta name="theme-color" content="#8b5cf6">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/logo.png">
+
+<!-- Share Link Preview -->
+<meta property="og:title" content="AIxMUSIC GENERATOR">
+<meta property="og:description" content="Infinite AI Music - Rock, Deep House, Metal, Classic, Jazz, Blues">
+<meta property="og:image" content="/logo.png">
+<meta property="og:type" content="website">
+
+<style>
+*{ -webkit-tap-highlight-color: transparent; box-sizing:border-box; }
+html,body{height:100%; margin:0; background:#050510; color:#fff; font-family:-apple-system,system-ui; overscroll-behavior:none;}
+body{display:flex; justify-content:center; align-items:center; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.app{width:100%; max-width:410px; padding:24px; background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(0,0,0,.7)); border:1.5px solid #8b5cf6; border-radius:32px; box-shadow:0 0 100px rgba(139,92,246,.6); text-align:center;}
+.logo{width:88px; height:88px; border-radius:22px; box-shadow:0 0 30px #8b5cf6; margin-bottom:12px;}
+.genres{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0;}
+.g{padding:11px 4px; border:1px solid #8b5cf6; border-radius:12px; background:rgba(139,92,246,.1); color:#fff; font-weight:700; font-size:11px; cursor:pointer;}
+.g.active{background:#8b5cf6; box-shadow:0 0 15px #8b5cf6;}
+.bars{display:flex; justify-content:center; gap:4px; height:48px; align-items:center; margin:14px 0;}
+.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px;}
+input{width:100%; background:#111; border:1px solid #333; border-radius:12px; padding:12px; color:#fff; margin:8px 0;}
+button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16px; border-radius:99px; font-weight:800; font-size:16px; box-shadow:0 0 30px #8b5cf6;}
+</style>
+</head>
+<body>
+<div class="app">
+  <img src="/logo.png" class="logo" alt="AIxMUSIC">
+  <h1 style="margin:0; letter-spacing:2px; font-size:20px;">AIxMUSIC GENERATOR</h1>
+  <small style="color:#22d3ee;">INFINITE ENGINE • by AIxFACTORY</small>
+  <input id="prompt" placeholder="Describe music... e.g dark piano deep house">
+  <div class="genres" id="genres"></div>
+  <div class="bars" id="bars"></div>
+  <button class="main" id="btn" onclick="toggle()">▶ START INFINITE</button>
+  <div id="status" style="font-size:11px; opacity:.7; margin-top:12px; font-family:monospace;">Select genre to start</div>
+</div>
+
+<script>
+const GENRES=['Deep House','Rock','Metal','Classic','Jazz','Blues','Lo-Fi','Trap'];
+let GENRE='Deep House', ctx, playing=false, timer, nextNote=0, step=0, track=null;
+const gDiv=document.getElementById('genres');
+GENRES.forEach(g=>{ let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g; b.onclick=()=>{GENRE=g; document.querySelectorAll('.g').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }; gDiv.appendChild(b); });
+const barsDiv=document.getElementById('bars'); for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='8px'; barsDiv.appendChild(d);} const bars=document.querySelectorAll('.bar');
+function rnd(a,b){return Math.random()*(b-a)+a}
+function kick(t){let o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);g.gain.setValueAtTime(1,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.5);}
+function playTone(t,f,fType){let o=ctx.createOscillator(),g=ctx.createGain();o.type=fType;o.frequency.value=f;g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.6);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.7);}
+async function fetchTrack(){ const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})}); return await res.json(); }
+function scheduler(){
+ if(!track) return;
+ let interval=60/track.bpm/2;
+ while(nextNote < ctx.currentTime+0.2){
+   if(track.drums.kick[step%16]) kick(nextNote);
+   if(track.bass[step%16]){ let f=track.scale[track.bass[step%16]%track.scale.length]*2; playTone(nextNote,f,track.wave); }
+   bars.forEach(b=>b.style.height=rnd(6,52)+'px');
+   nextNote+=interval; step=(step+1)%16;
+   if(step===0){ fetchTrack().then(t=>track=t); }
+ }
+ timer=setTimeout(scheduler,50);
+}
+async function toggle(){
+ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+ if(!playing){
+   document.getElementById('status').innerText='🧠 Groq AI generating '+GENRE+'...';
+   track=await fetchTrack();
+   playing=true; nextNote=ctx.currentTime; step=0; scheduler();
+   document.getElementById('btn').innerText='■ STOP ENGINE';
+   document.getElementById('status').innerText=`♾️ PLAYING ${GENRE} | ${track.bpm} BPM | ${track.mood}`;
+ } else { playing=false; clearTimeout(timer); document.getElementById('btn').innerText='▶ START INFINITE'; document.getElementById('status').innerText='Stopped'; }
+}
+if('serviceWorker' in navigator){ /* optional PWA cache */ }
+</script>
+</body>
+</html>
