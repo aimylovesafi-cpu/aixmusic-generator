@@ -16,18 +16,22 @@ app.post('/api/generate', async (req, res) => {
   const { genre, prompt } = req.body;
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.95,
+      model: "llama-3.1-8b-instant", // 8b = 10x cheaper + limit 30 RPM but 7000 RPD
+      temperature: 0.9,
+      max_tokens: 1200, // محدود کردیم
       messages: [
-        { role: "system", content: `You are AIxMUSIC GENERATOR engine. Return ONLY valid JSON: {"bpm":80-170,"scale":[freqs Hz 4-7 notes],"bass":[16 ints 0/1],"lead":[16 ints scale index or null],"drums":{"kick":[16 bools],"hat":[16 bools],"clap":[16 bools]},"mood":"string","wave":"sawtooth|square|sine|triangle"} Genre=${genre}` },
-        { role: "user", content: `Genre: ${genre}, Prompt: ${prompt}. Generate variation.` }
+        { role: "system", content: `Return ONLY JSON array of 5 tracks. Each: {"bpm":80-170,"scale":[freqs],"bass":[16 0/1],"drums":{"kick":[16 bool],"hat":[16 bool]},"mood":string,"wave":"sawtooth|square|sine|triangle"} Genre=${genre}` },
+        { role: "user", content: `Genre: ${genre}, Prompt: ${prompt}. Generate 5 variations.` }
       ],
       response_format: { type: "json_object" }
     });
-    res.json(JSON.parse(completion.choices[0].message.content));
+    const data = JSON.parse(completion.choices[0].message.content);
+    // اگه array نبود، تبدیل به array
+    const tracks = Array.isArray(data) ? data : data.tracks || [data];
+    res.json({ tracks });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('*', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`AIxMUSIC GENERATOR running on ${PORT}`));
+app.listen(PORT, () => console.log(`AIxMUSIC OPTIMIZED on ${PORT}`));
