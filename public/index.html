@@ -87,9 +87,29 @@ function initAudio(){
 function kick(t,vel=1){ let o=ctx.createOscillator(),g=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(42,t+0.12); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5); }
 function snare(t,vel=0.8){ let buf=ctx.createBuffer(1,ctx.sampleRate*0.2,ctx.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2); let s=ctx.createBufferSource(); s.buffer=buf; let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=180; let g=ctx.createGain(); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.32); s.connect(f); f.connect(g); g.connect(masterGain); s.start(t); }
 function hat(t,open=false,vel=0.4){ let b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); let src=ctx.createBufferSource(); src.buffer=b; let hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=open?3800:7800; let g=ctx.createGain(); g.gain.setValueAtTime(vel*(open?0.5:0.3),t); g.gain.exponentialRampToValueAtTime(0.01,t+(open?0.35:0.09)); src.connect(hp); hp.connect(g); g.connect(masterGain); src.start(t); }
-function playChord(t,rootFreq,voicing){ let intervals=voicing==='power'?[0,7]:voicing==='7th'?[0,4,7,10]:[0,4,7]; intervals.forEach((semi,i)=>{ let f=rootFreq*Math.pow(2,semi/12); let o=ctx.createOscillator(),g=ctx.createGain(); o.type='triangle'; o.frequency.value=f; o.detune.value=rnd(-4,4); g.gain.setValueAtTime(0.18/(i+1.2),t); g.gain.exponentialRampToValueAtTime(0.01,t+1.1); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+1.2); }); }
-function playTone(t,f,type,vel=0.34,len=0.55){ try{ let o=ctx.createOscillator(),g=ctx.createGain(); o.type=type||'sawtooth'; o.frequency.value=f; o.detune.value=rnd(-6,6); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+len); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+len+0.05);}catch(e){log('tone err:'+e.message)} }
 
+  function playChord(t,rootFreq,voicing){
+  if(!isFinite(rootFreq)) return;
+  let intervals=voicing==='power'?[0,7]:voicing==='7th'?[0,4,7,10]:[0,4,7];
+  intervals.forEach((semi,i)=>{
+    let f=rootFreq*Math.pow(2,semi/12);
+    if(!isFinite(f)) return;
+    let o=ctx.createOscillator(),g=ctx.createGain();
+    o.type='triangle'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.18/(i+1.2),t); g.gain.exponentialRampToValueAtTime(0.01,t+1.1);
+    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+1.2);
+  });
+}
+function playTone(t,f,type,vel=0.34,len=0.55){
+  if(!isFinite(f)) { log('skip NaN freq'); return; }
+  try{
+    let o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type||'sawtooth'; o.frequency.value=f;
+    g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+len);
+    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+len+0.05);
+  }catch(e){log('tone err:'+e.message)}
+}
+  
 // PRO Fallback with real music theory
 function getFallbackTrack(){
   const LIB={
