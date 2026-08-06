@@ -162,8 +162,10 @@ function scheduler(){
    let t=nextNote+human;
    let prog=track.chordProgression||[0,3,4,3];
    let cIdx=prog[Math.floor(step/4)%prog.length];
-   let root=track.scale[cIdx % track.scale.length]||track.scale[0];
-
+  
+  let root=track.scale[cIdx % track.scale.length]||track.scale[0]||110;
+if(!isFinite(root)) root=110;
+   
    if(track.drums?.kick[s]) kick(t, 0.9+rnd(0,0.2));
    if(track.drums?.snare[s]) snare(t, 0.6+rnd(0,0.3));
    if(track.drums?.hat[s]) hat(t,false,0.4);
