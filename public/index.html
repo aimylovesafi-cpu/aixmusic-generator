@@ -1,11 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<!-- iOS Fullscreen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AIxMUSIC">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo.png">
+
+<!-- Android + PWA -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050510">
+<link rel="manifest" href="/manifest.json">
+
+<title>AIxMUSIC DUAL BRAIN v8.1.0</title>
+
+  
+  
+  
 <link rel="icon" type="image/webp" href="logo.webp">
 <link rel="apple-touch-icon" href="logo.webp">
 <link rel="icon" type="image/png" href="./logo.png">
 <link rel="apple-touch-icon" href="./logo.png"> <title>AIxMUSIC DUAL BRAIN</title>
+
+  
+  
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent} body{margin:0;background:#050510;color:#fff;font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:12px}
 .app{width:100%;max-width:420px;background:linear-gradient(180deg,rgba(139,92,246,.2),rgba(0,0,0,.8));border:1.5px solid #8b5cf6;border-radius:28px;padding:18px;box-shadow:0 0 80px rgba(139,92,246,.5);text-align:center}
@@ -248,5 +271,12 @@ async function askCreativeAuto(q){
 }
 log('DUAL BRAIN V7.2 EN - READY');
 </script>
+
+  <script>
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('/sw.js');
+}
+</script>
+  
 </body>
 </html>
