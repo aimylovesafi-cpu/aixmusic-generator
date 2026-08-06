@@ -1,216 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<title>AIxMUSIC GENERATOR</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AIxMUSIC">
-<link rel="apple-touch-icon" href="/logo.png">
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" href="/logo.png">
-<meta property="og:image" content="/logo.png">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AIxMUSIC DUAL BRAIN</title>
 <style>
-*{ -webkit-tap-highlight-color: transparent; box-sizing:border-box; }
-html,body{height:100%; margin:0; background:#050510; color:#fff; font-family:-apple-system,system-ui; overscroll-behavior:none;}
-body{display:flex; justify-content:center; align-items:center; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
-.app{width:100%; max-width:410px; padding:24px; background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(0,0,0,.7)); border:1.5px solid #8b5cf6; border-radius:32px; box-shadow:0 0 100px rgba(139,92,246,.6); text-align:center; position:relative;}
-.logo{width:88px; height:88px; border-radius:22px; box-shadow:0 0 30px #8b5cf6; margin-bottom:12px;}
-.genres{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0;}
-.g{padding:11px 4px; border:1px solid #8b5cf6; border-radius:12px; background:rgba(139,92,246,.1); color:#fff; font-weight:700; font-size:11px; cursor:pointer; transition:.2s;}
-.g.active{background:#8b5cf6; box-shadow:0 0 15px #8b5cf6; transform:scale(1.05);}
-.bars{display:flex; justify-content:center; gap:4px; height:48px; align-items:center; margin:14px 0;}
-.bar{width:6px; background:linear-gradient(#8b5cf6,#22d3ee); border-radius:4px; transition:height.1s ease;}
-input{width:100%; background:#111; border:1px solid #333; border-radius:12px; padding:12px; color:#fff; margin:8px 0;}
-button.main{width:100%; background:#8b5cf6; border:none; color:#fff; padding:16px; border-radius:99px; font-weight:800; font-size:16px; box-shadow:0 0 30px #8b5cf6; cursor:pointer;}
-#debugBtn{position:absolute; top:12px; right:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:8px; padding:4px 8px; font-size:10px; cursor:pointer;}
-#debugPanel{display:none; text-align:left; background:#000; border:1px solid #8b5cf6; border-radius:12px; padding:8px; margin-top:12px; height:160px; overflow:auto; font-family:monospace; font-size:10px; line-height:1.4; white-space:pre-wrap;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent} body{margin:0;background:#050510;color:#fff;font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:12px}
+.app{width:100%;max-width:420px;background:linear-gradient(180deg,rgba(139,92,246,.2),rgba(0,0,0,.8));border:1.5px solid #8b5cf6;border-radius:28px;padding:18px;box-shadow:0 0 80px rgba(139,92,246,.5);text-align:center}
+.genres{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.g{padding:9px 2px;border:1px solid #8b5cf6;border-radius:10px;background:rgba(139,92,246,.12);color:#fff;font-weight:700;font-size:10px;cursor:pointer}.g.active{background:#8b5cf6;box-shadow:0 0 12px #8b5cf6}
+.bars{display:flex;gap:3px;justify-content:center;height:44px;align-items:center;margin:12px 0}.bar{width:5px;background:linear-gradient(#8b5cf6,#22d3ee);border-radius:4px;transition:height.08s}
+input, #chatInput{width:100%;background:#111;border:1px solid #333;border-radius:12px;padding:11px;color:#fff;margin:6px 0;font-size:13px}
+button.main{width:100%;background:#8b5cf6;border:none;color:#fff;padding:14px;border-radius:99px;font-weight:800;box-shadow:0 0 24px #8b5cf6;cursor:pointer}
+.brain{display:flex;gap:8px;margin:8px 0}.brain div{flex:1;border-radius:12px;padding:8px;font-size:10px;border:1px solid #222} #brain1{border-color:#8b5cf6;background:rgba(139,92,246,.1)} #brain2{border-color:#22d3ee;background:rgba(34,211,238,.08);text-align:left;max-height:110px;overflow:auto}
+#chatBox{font-size:12px;line-height:1.4;white-space:pre-wrap}
 </style>
 </head>
 <body>
 <div class="app">
-  <button id="debugBtn" onclick="toggleDebug()">🐞 DEBUG</button>
-  <img src="/logo.png" class="logo" alt="AIxMUSIC">
-  <h1 style="margin:0; letter-spacing:2px; font-size:20px;">AIxMUSIC GENERATOR</h1>
-  <small style="color:#22d3ee;">INFINITE ENGINE • by AIxFACTORY</small>
-  <input id="prompt" value="Deep house music" placeholder="Describe music...">
+  <img src="/logo.png" style="width:72px;border-radius:18px;box-shadow:0 0 20px #8b5cf6">
+  <h2 style="margin:6px 0;letter-spacing:2px">AIxMUSIC DUAL BRAIN</h2>
+  <div class="brain"><div id="brain1">🧠 CONDUCTOR<br><small id="b1">Idle</small></div><div id="brain2">⚡ CREATIVE<br><div id="chatBox">سلام! من مغز خلاقتم 😎 هرچی میخوای از آهنگ بپرس!</div></div></div>
+  <input id="prompt" value="hypnotic deep house night drive">
   <div class="genres" id="genres"></div>
   <div class="bars" id="bars"></div>
-  <button class="main" id="btn" onclick="toggle()">▶ START INFINITE</button>
-  <div id="status" style="font-size:11px; opacity:.7; margin-top:12px; font-family:monospace;">Select genre to start</div>
-  <div id="debugPanel"></div>
+  <button class="main" id="btn" onclick="toggle()">▶ BUFFER & PLAY</button>
+  <div style="display:flex;gap:6px;margin-top:8px"><input id="chatInput" placeholder="به مغز خلاق بگو: darker, more funky..." onkeydown="if(event.key==='Enter') askCreative()"><button onclick="askCreative()" style="background:#22d3ee;border:none;border-radius:10px;padding:0 14px;color:#000;font-weight:800">SEND</button></div>
+  <div id="status" style="font-size:10px;opacity:.6;margin-top:8px;font-family:monospace">Dual brain ready</div>
+  <div id="debug" style="display:none;text-align:left;background:#000;border:1px solid #333;border-radius:10px;padding:6px;margin-top:8px;height:120px;overflow:auto;font-family:monospace;font-size:9px"></div>
+  <small onclick="document.getElementById('debug').style.display=document.getElementById('debug').style.display==='block'?'none':'block'" style="opacity:.4;cursor:pointer">🐞 debug</small>
 </div>
-
 <script>
-// --- CONFIG ---
 const GENRES=['Deep House','Rock','Metal','Classic','Jazz','Blues','Lo-Fi','Trap'];
-let GENRE='Deep House', ctx, masterGain, playing=false, timer, nextNote=0, step=0, track=null, loopCount=0;
-let trackQueue=[], lastFetch=0, logs=[];
-
-function log(msg){
-  console.log(msg);
-  logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
-  if(logs.length>120) logs.shift();
-  const p=document.getElementById('debugPanel');
-  p.innerText=logs.join('\n'); p.scrollTop=9999;
-}
-function toggleDebug(){
-  const p=document.getElementById('debugPanel');
-  p.style.display=p.style.display==='block'?'none':'block';
-  log('Debug toggled');
-}
+let GENRE='Deep House', ctx, masterGain, playing=false, timer, nextNote=0, step=0, logs=[];
+let session=null, sections=[], sectionIdx=0, barCount=0;
+function log(m){ logs.push(`[${new Date().toLocaleTimeString()}] ${m}`); if(logs.length>80) logs.shift(); document.getElementById('debug').innerText=logs.join('\n'); document.getElementById('b1').innerText=m.slice(0,32); }
+const gDiv=document.getElementById('genres'); GENRES.forEach(g=>{ let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g; b.onclick=()=>{GENRE=g; document.querySelectorAll('.g').forEach(x=>x.classList.remove('active')); b.classList.add('active'); session=null; sections=[]; log('Genre '+g+' reset');}; gDiv.appendChild(b); });
+const barsDiv=document.getElementById('bars'); for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='6px'; barsDiv.appendChild(d);} const bars=document.querySelectorAll('.bar');
 function rnd(a,b){return Math.random()*(b-a)+a}
+function initAudio(){ if(!ctx){ ctx=new(window.AudioContext||window.webkitAudioContext)(); masterGain=ctx.createGain(); masterGain.gain.value=0.85; masterGain.connect(ctx.destination);} if(ctx.state==='suspended') ctx.resume(); }
+function kick(t){ let o=ctx.createOscillator(),g=ctx.createGain(); o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(42,t+0.11); g.gain.setValueAtTime(0.95,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5); }
+function snare(t){ let b=ctx.createBuffer(1,ctx.sampleRate*0.18,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2); let s=ctx.createBufferSource(); s.buffer=b; let g=ctx.createGain(); g.gain.setValueAtTime(0.7,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.3); s.connect(g); g.connect(masterGain); s.start(t); }
+function hat(t,o=false){ let b=ctx.createBuffer(1,ctx.sampleRate*0.05,ctx.sampleRate),d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); let src=ctx.createBufferSource(); src.buffer=b; let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=o?3500:8000; let g=ctx.createGain(); g.gain.setValueAtTime(o?0.35:0.28,t); g.gain.exponentialRampToValueAtTime(0.01,t+(o?0.25:0.07)); src.connect(f); f.connect(g); g.connect(masterGain); src.start(t); }
+function bass(t,f){ if(!isFinite(f)) return; let o=ctx.createOscillator(),g=ctx.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(0.6,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.8); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.85); }
+function lead(t,f,v=0.4){ if(!isFinite(f)) return; let o=ctx.createOscillator(),g=ctx.createGain(); o.type='sawtooth'; o.frequency.value=f; o.detune.value=rnd(-4,4); g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.6); }
 
-// UI
-const gDiv=document.getElementById('genres');
-GENRES.forEach(g=>{
-  let b=document.createElement('button'); b.className='g'+(g===GENRE?' active':''); b.innerText=g;
-  b.onclick=()=>{GENRE=g; document.querySelectorAll('.g').forEach(x=>x.classList.remove('active')); b.classList.add('active'); log('Genre -> '+g);};
-  gDiv.appendChild(b);
-});
-const barsDiv=document.getElementById('bars');
-for(let i=0;i<20;i++){let d=document.createElement('div'); d.className='bar'; d.style.height='8px'; barsDiv.appendChild(d);}
-const bars=document.querySelectorAll('.bar');
+async function bufferSong(){
+  document.getElementById('status').innerText='🧠 CONDUCTOR buffering 4 sections...';
+  log('BUFFERING 4 sections');
+  let res=await fetch('/api/conductor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value,session,need:4})});
+  let data=await res.json();
+  if(!session) session=data.lock;
+  else session={...session,...data.lock};
+  sections=data.sections;
+  sectionIdx=0; barCount=0;
+  log(`LOCKED ${session.key} ${session.bpm} BPM | Buffered ${sections.length}`);
+  document.getElementById('status').innerText=`♪ ${session.key} | ${session.bpm} BPM | Buffered ${sections.length} sections`;
+  return true;
+}
 
-// AUDIO CORE
-function initAudio(){
-  if(!ctx){
-    ctx=new (window.AudioContext||window.webkitAudioContext)();
-    masterGain=ctx.createGain(); masterGain.gain.value=0.85; masterGain.connect(ctx.destination);
-    log(`AudioContext: ${ctx.state} sr:${ctx.sampleRate}`);
+async function needMore(){
+  if(sections.length - sectionIdx <2){
+    log('Low buffer, fetching 2 more');
+    let res=await fetch('/api/conductor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value,session,need:2})});
+    let data=await res.json(); sections.push(...data.sections); log(`+2 buffered total ${sections.length}`);
   }
-  if(ctx.state==='suspended') ctx.resume().then(()=>log('Resumed!'));
-}
-
-// PRO Instruments
-function kick(t,vel=1){ let o=ctx.createOscillator(),g=ctx.createGain(); o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(42,t+0.12); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.5); o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.5); }
-function snare(t,vel=0.8){ let buf=ctx.createBuffer(1,ctx.sampleRate*0.2,ctx.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2); let s=ctx.createBufferSource(); s.buffer=buf; let f=ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=180; let g=ctx.createGain(); g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.32); s.connect(f); f.connect(g); g.connect(masterGain); s.start(t); }
-function hat(t,open=false,vel=0.4){ let b=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); let src=ctx.createBufferSource(); src.buffer=b; let hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=open?3800:7800; let g=ctx.createGain(); g.gain.setValueAtTime(vel*(open?0.5:0.3),t); g.gain.exponentialRampToValueAtTime(0.01,t+(open?0.35:0.09)); src.connect(hp); hp.connect(g); g.connect(masterGain); src.start(t); }
-
-  function playChord(t,rootFreq,voicing){
-  if(!isFinite(rootFreq)) return;
-  let intervals=voicing==='power'?[0,7]:voicing==='7th'?[0,4,7,10]:[0,4,7];
-  intervals.forEach((semi,i)=>{
-    let f=rootFreq*Math.pow(2,semi/12);
-    if(!isFinite(f)) return;
-    let o=ctx.createOscillator(),g=ctx.createGain();
-    o.type='triangle'; o.frequency.value=f;
-    g.gain.setValueAtTime(0.18/(i+1.2),t); g.gain.exponentialRampToValueAtTime(0.01,t+1.1);
-    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+1.2);
-  });
-}
-function playTone(t,f,type,vel=0.34,len=0.55){
-  if(!isFinite(f)) { log('skip NaN freq'); return; }
-  try{
-    let o=ctx.createOscillator(),g=ctx.createGain();
-    o.type=type||'sawtooth'; o.frequency.value=f;
-    g.gain.setValueAtTime(vel,t); g.gain.exponentialRampToValueAtTime(0.01,t+len);
-    o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+len+0.05);
-  }catch(e){log('tone err:'+e.message)}
-}
-  
-// PRO Fallback with real music theory
-function getFallbackTrack(){
-  const LIB={
-    "Deep House":{bpm:124, scale:[55,62,73.4,82.4,98,110], prog:[0,3,4,3], voicing:"7th", swing:0},
-    "Rock":{bpm:138, scale:[82.4,98,110,123,146.8], prog:[0,3,4,0], voicing:"power", swing:0},
-    "Metal":{bpm:160, scale:[41.2,49,58.2,69.2,82.4], prog:[0,6,5,3], voicing:"power", swing:0},
-    "Classic":{bpm:84, scale:[130.8,146.8,164.8,196,220,246.9,293.6], prog:[0,3,4,4], voicing:"triad", swing:0},
-    "Jazz":{bpm:112, scale:[73.4,82.4,87.3,98,110,123.4,130.8], prog:[1,4,0,5], voicing:"7th", swing:0.22},
-    "Blues":{bpm:88, scale:[55,65.4,73.4,77.7,82.4,98], prog:[0,0,0,0,3,4,0,0], voicing:"7th", swing:0.12},
-    "Lo-Fi":{bpm:78, scale:[65.4,77.7,87.3,98,116.5], prog:[0,3,2,1], voicing:"7th", swing:0.15},
-    "Trap":{bpm:140, scale:[48,56,63.5,72,85], prog:[0,5,3,4], voicing:"triad", swing:0}
-  };
-  let th=LIB[GENRE]||LIB["Deep House"];
-  // generate non-repetitive patterns
-  let kickP=Array(16).fill(0).map((_,i)=> i%4===0 || (GENRE==="Rock"&&i===10)?1:0);
-  let hatP=Array(16).fill(0).map((_,i)=> GENRE==="Jazz"? (i%3===0?1:0) : (i%2===1?1:0) );
-  let leadP=Array(16).fill(null).map((_,i)=> Math.random()>0.6?{note:(Math.random()*th.scale.length)|0, vel:rnd(0.4,0.9), len:rnd(0.2,0.7)}:null);
-  log(`Fallback PRO: ${GENRE} prog ${th.prog}`);
-  return { bpm:th.bpm+rnd(-3,3)|0, scale:th.scale, wave:GENRE==="Classic"?"sine":GENRE==="Jazz"?"triangle":"sawtooth", mood:"pro live", swing:th.swing, chordProgression:th.prog, bass:{pattern:kickP}, chords:{pattern:Array(16).fill(0).map((_,i)=> i%4===0?1:0), voicing:th.voicing}, lead:{pattern:leadP, humanize:true}, drums:{kick:kickP, snare:Array(16).fill(0).map((_,i)=> i===4||i===12?1:0), hat:hatP, openHat:Array(16).fill(0).map((_,i)=> i===7||i===15?1:0)} };
-}
-
-// TOKEN OPTIMIZED fetch
-async function fetchTrack(){
-  if(trackQueue.length>0){
-    log(`Queue hit: ${trackQueue.length} left | saving tokens`);
-    return trackQueue.shift();
-  }
-  let now=Date.now();
-  if(now-lastFetch<28000){ log('Rate guard: local pro track'); return getFallbackTrack(); }
-  lastFetch=now;
-  try{
-    log(`Groq PRO (5 tracks) -> ${GENRE}`);
-    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({genre:GENRE,prompt:document.getElementById('prompt').value})});
-    if(!res.ok) throw new Error('HTTP '+res.status+' '+(await res.text()).slice(0,120));
-    const data=await res.json();
-    let list=data.tracks||[data];
-    trackQueue=list.slice(1);
-    log(`Groq OK: ${list.length} tracks | BPM ${list[0].bpm} | mood ${list[0].mood} | Q=${trackQueue.length}`);
-    return list[0];
-  }catch(e){ log('Groq ERR: '+e.message); return getFallbackTrack(); }
 }
 
 function scheduler(){
- if(!track) return;
- let base=60/track.bpm/4;
- let swing=track.swing||0;
- while(nextNote < ctx.currentTime+0.25){
-   let s=step%16;
-   let human=track.lead?.humanize? rnd(-0.015,0.015):0;
-   let t=nextNote+human;
-   let prog=track.chordProgression||[0,3,4,3];
-   let cIdx=prog[Math.floor(step/4)%prog.length];
-  
-  let root=track.scale[cIdx % track.scale.length]||track.scale[0]||110;
-if(!isFinite(root)) root=110;
-   
-   if(track.drums?.kick[s]) kick(t, 0.9+rnd(0,0.2));
-   if(track.drums?.snare[s]) snare(t, 0.6+rnd(0,0.3));
-   if(track.drums?.hat[s]) hat(t,false,0.4);
-   if(track.drums?.openHat[s]) hat(t,true,0.35);
-
-   if(track.chords?.pattern[s]) playChord(t, root*2, track.chords.voicing||'triad');
-   if(track.bass?.pattern[s]) playTone(t, root*0.5, 'sine', 0.55, 0.9);
-
-   let lead=track.lead?.pattern?.[s];
-   if(lead && lead.note!==null){ let f=track.scale[lead.note%track.scale.length]*2; playTone(t,f,track.wave,lead.vel||0.5,lead.len||0.4); }
-
-   bars.forEach((b,i)=>{ b.style.height=(i%16===s? rnd(28,56):rnd(4,16))+'px'; });
-   let isOff=s%2===1;
-   nextNote+= base * (isOff? 1+swing : 1);
-   step=(step+1)%16;
-   if(step===0){
-     loopCount++;
-     if(loopCount%4===0){
-       fetchTrack().then(nt=>{ track=nt; document.getElementById('status').innerText=`∞ ${GENRE} | ${track.bpm} BPM | ${track.mood} | Q:${trackQueue.length}`; });
-     }
-   }
- }
- timer=setTimeout(scheduler,30);
+  if(!session||!sections.length) return;
+  let cur=sections[sectionIdx];
+  let base=60/session.bpm/4;
+  while(nextNote < ctx.currentTime+0.25){
+    let s=step%16;
+    let t=nextNote;
+    let prog=session.prog; let chordIdx=prog[Math.floor(s/4)%prog.length]; let root=session.scale[chordIdx%session.scale.length];
+    if(cur.kick?.[s]) kick(t);
+    if(cur.snare?.[s]) snare(t);
+    if(cur.hat?.[s]) hat(t,false);
+    if(cur.bass?.[s]) bass(t,root);
+    let m=cur.melody?.[s]; if(m && m.n!=null){ let f=session.scale[m.n%session.scale.length]*2; lead(t,f,m.v||0.5); }
+    bars.forEach((b,i)=> b.style.height= i%16===s? '44px': rnd(4,14)+'px');
+    nextNote+=base; step=(step+1)%16;
+    if(step===0){
+      barCount++;
+      if(barCount%4===0){
+        sectionIdx=(sectionIdx+1)%sections.length;
+        document.getElementById('status').innerText=`♪ ${session.key} | ${session.bpm} BPM | ${cur.id||sectionIdx} | buf:${sections.length-sectionIdx}`;
+        if(sections.length-sectionIdx<2) needMore();
+      }
+    }
+  }
+  timer=setTimeout(scheduler,25);
 }
 
 async function toggle(){
- initAudio();
- if(!playing){
-   log('START ctx:'+ctx.state);
-   document.getElementById('status').innerText='🧠 Composing...';
-   track=await fetchTrack();
-   playing=true; nextNote=ctx.currentTime+0.06; step=0; scheduler();
-   document.getElementById('btn').innerText='■ STOP ENGINE';
-   document.getElementById('status').innerText=`∞ ${GENRE} | ${track.bpm} BPM | ${track.mood} | Q:${trackQueue.length}`;
-   log('Engine ON');
- }else{
-   playing=false; clearTimeout(timer);
-   document.getElementById('btn').innerText='▶ START INFINITE';
-   document.getElementById('status').innerText='Stopped';
-   bars.forEach(b=>b.style.height='8px');
-   log('Engine OFF');
- }
+  initAudio();
+  if(!playing){
+    document.getElementById('btn').innerText='⏳ BUFFERING...';
+    await bufferSong();
+    playing=true; nextNote=ctx.currentTime+0.1; step=0; scheduler();
+    document.getElementById('btn').innerText='■ STOP DUAL ENGINE';
+    askCreativeAuto('Song started! Explain what we are playing in a cool way');
+  }else{
+    playing=false; clearTimeout(timer); document.getElementById('btn').innerText='▶ BUFFER & PLAY';
+  }
 }
-document.addEventListener('touchstart',()=>{ if(ctx&&ctx.state==='suspended') ctx.resume(); }, {once:true});
-log('AIxMUSIC PRO V4 Ready - Token optimized, non-repetitive');
+async function askCreative(){
+  let q=document.getElementById('chatInput').value; if(!q) return;
+  document.getElementById('chatInput').value='';
+  let box=document.getElementById('chatBox'); box.innerText='⚡ Thinking...';
+  let res=await fetch('/api/creative',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q,genre:GENRE,session})});
+  let data=await res.json(); box.innerText=data.a;
+  // اگه گفت darker / funky -> پرامپت رو اپدیت کن
+  if(q.toLowerCase().includes('darker')||q.toLowerCase().includes('funk')||q.toLowerCase().includes('more')){ document.getElementById('prompt').value+=' '+q; log('Prompt updated: '+q); }
+}
+async function askCreativeAuto(q){
+  let box=document.getElementById('chatBox'); box.innerText='⚡...';
+  let res=await fetch('/api/creative',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q,genre:GENRE,session})});
+  let data=await res.json(); box.innerText=data.a;
+}
+log('DUAL BRAIN READY');
 </script>
 </body>
 </html>
